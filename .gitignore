@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+agri_local.db
+uploads/
+.DS_Store
