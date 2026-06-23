@@ -12,10 +12,15 @@ Users are defined in ``.streamlit/secrets.toml`` like this::
     name = "Kunal"
     password = "choose-a-password"
 
-If no users are configured (e.g. running locally for the first time), two
-accounts are available so you can try the app immediately:
+Add ``admin = true`` to a user to let them delete/edit *anyone's* entries::
 
-    darshan / farm123      and      kunal / farm123
+    [[auth.users]]
+    username = "darshan"
+    name = "Darshan"
+    password = "choose-a-password"
+    admin = true
+
+Non-admin users can only delete or edit the entries they created themselves.
 
 Passwords live only in server-side secrets and are never sent to the browser.
 The logged-in username is stored on every record so you can see who added what.
@@ -28,8 +33,8 @@ import hmac
 import streamlit as st
 
 DEMO_USERS = [
-    {"username": "darshan", "name": "Darshan", "password": "farm123"},
-    {"username": "kunal", "name": "Kunal", "password": "farm123"},
+    {"username": "darshan", "name": "Darshan", "password": "Darshan@123", "admin": True},
+    {"username": "kunal", "name": "Kunal", "password": "Farm@123"},
 ]
 
 
@@ -65,6 +70,7 @@ def _login_form() -> None:
             st.session_state["auth_user"] = {
                 "username": user["username"],
                 "name": user.get("name", user["username"]),
+                "admin": bool(user.get("admin", False)),
             }
             st.rerun()
         else:
@@ -85,6 +91,20 @@ def current_user() -> dict:
 
 def current_username() -> str:
     return current_user().get("username", "unknown")
+
+
+def is_admin() -> bool:
+    return bool(current_user().get("admin", False))
+
+
+def can_modify(record: dict) -> bool:
+    """True if the current user may edit/delete this record.
+
+    Admins can modify anything; everyone else only their own entries.
+    """
+    if is_admin():
+        return True
+    return bool(record) and record.get("created_by") == current_username()
 
 
 def logout() -> None:

@@ -7,7 +7,7 @@ from datetime import date
 import streamlit as st
 
 from lib import config, db
-from lib.auth import current_username
+from lib.auth import can_modify, current_username
 from views.common import crops_df
 
 
@@ -69,13 +69,17 @@ def render() -> None:
     st.metric(f"Total farm size ({config.AREA_UNIT})", f"{df['farm_size_acres'].sum():,.2f}")
 
     with st.expander("✏️ Edit or delete a crop"):
-        crops = db.list_crops()
-        pick = st.selectbox(
-            "Select crop",
-            crops,
-            format_func=lambda c: f"{c['name']} ({c.get('season') or '—'})",
-            key="edit_crop_pick",
-        )
+        crops = [c for c in db.list_crops() if can_modify(c)]
+        if not crops:
+            st.caption("You can only edit or delete crops you added yourself.")
+            pick = None
+        else:
+            pick = st.selectbox(
+                "Select crop",
+                crops,
+                format_func=lambda c: f"{c['name']} ({c.get('season') or '—'})",
+                key="edit_crop_pick",
+            )
         if pick:
             with st.form("edit_crop"):
                 c1, c2 = st.columns(2)

@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from lib import config, db
-from lib.auth import current_username
+from lib.auth import can_modify, current_username
 from views.common import crop_lookup, crop_select, expenses_df
 
 
@@ -121,8 +121,10 @@ def render() -> None:
     m2.metric("Entries", len(view))
 
     with st.expander("🗑️ Delete an expense"):
-        records = db.list_expenses()
-        if records:
+        records = [r for r in db.list_expenses() if can_modify(r)]
+        if not records:
+            st.caption("You can only delete expenses you added yourself.")
+        else:
             pick = st.selectbox(
                 "Select expense to delete",
                 records,

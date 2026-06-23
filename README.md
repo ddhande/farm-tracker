@@ -76,12 +76,16 @@ This uses three free services. Total time ~15 minutes. You only do this once.
    username = "darshan"
    name = "Darshan"
    password = "pick-a-strong-password"
+   admin = true
 
    [[auth.users]]
    username = "kunal"
    name = "Kunal"
    password = "pick-a-strong-password"
    ```
+
+   > `admin = true` lets that person delete/edit **any** entry. Without it, a
+   > user can only delete/edit the entries they created themselves.
 5. Click **Deploy**. After a minute you'll get a URL like
    `https://farm-tracker.streamlit.app`.
 

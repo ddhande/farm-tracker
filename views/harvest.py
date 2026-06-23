@@ -7,7 +7,7 @@ from datetime import date
 import streamlit as st
 
 from lib import config, db
-from lib.auth import current_username
+from lib.auth import can_modify, current_username
 from views.common import crop_lookup, crop_select, harvests_df
 
 
@@ -96,8 +96,10 @@ def render() -> None:
     m4.metric("Total transport cost", config.money(df["transport_cost"].sum()))
 
     with st.expander("🗑️ Delete a harvest record"):
-        records = db.list_harvests()
-        if records:
+        records = [r for r in db.list_harvests() if can_modify(r)]
+        if not records:
+            st.caption("You can only delete harvest records you added yourself.")
+        else:
             pick = st.selectbox(
                 "Select record to delete",
                 records,

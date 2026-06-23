@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from lib import config, db
-from lib.auth import current_username
+from lib.auth import can_modify, current_username
 from views.common import crop_lookup
 
 
@@ -64,12 +64,17 @@ def render() -> None:
         st.dataframe(df, width="stretch", hide_index=True)
 
         with st.expander("✏️ Update a stage"):
-            pick = st.selectbox(
-                "Stage",
-                stages,
-                format_func=lambda s: f"{s['stage']} ({s.get('status')})",
-                key="lc_stage_pick",
-            )
+            editable = [s for s in stages if can_modify(s)]
+            if not editable:
+                st.caption("You can only update or delete stages you added yourself.")
+                pick = None
+            else:
+                pick = st.selectbox(
+                    "Stage",
+                    editable,
+                    format_func=lambda s: f"{s['stage']} ({s.get('status')})",
+                    key="lc_stage_pick",
+                )
             if pick:
                 with st.form("update_stage"):
                     c1, c2 = st.columns(2)

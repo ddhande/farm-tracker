@@ -38,6 +38,21 @@ def _supabase_configured() -> bool:
     return bool(_get_secret("supabase", "url") and _get_secret("supabase", "key"))
 
 
+def _clean_url(url: Optional[str]) -> str:
+    """Normalize the Supabase URL.
+
+    Accepts values pasted with a trailing slash or an accidental ``/rest/v1``
+    suffix and reduces them to the bare project URL the client expects, e.g.
+    ``https://abc.supabase.co``. This prevents the common PGRST125
+    "Invalid path specified in request URL" error.
+    """
+    url = (url or "").strip()
+    url = url.rstrip("/")
+    if url.endswith("/rest/v1"):
+        url = url[: -len("/rest/v1")]
+    return url.rstrip("/")
+
+
 # ---------------------------------------------------------------------------
 # Base backend
 # ---------------------------------------------------------------------------
@@ -266,8 +281,8 @@ class SupabaseBackend(Backend):
         from supabase import create_client
 
         self.client = create_client(
-            _get_secret("supabase", "url"),
-            _get_secret("supabase", "key"),
+            _clean_url(_get_secret("supabase", "url")),
+            (_get_secret("supabase", "key") or "").strip(),
         )
 
     def init(self) -> None:
@@ -392,6 +407,23 @@ def backend_name() -> str:
 
 def is_shared() -> bool:
     return _supabase_configured()
+
+
+def health_check() -> tuple[bool, Optional[str]]:
+    """Verify the active backend can actually read data.
+
+    Returns (ok, error_message). In local SQLite mode this is always ok.
+    In shared (Supabase) mode it runs a tiny query so connection/permission
+    problems surface as a clear on-screen message instead of a redacted crash.
+    """
+    backend = get_backend()
+    if not isinstance(backend, SupabaseBackend):
+        return True, None
+    try:
+        backend.client.table("expenses").select("id").limit(1).execute()
+        return True, None
+    except Exception as exc:  # noqa: BLE001 - we want the raw message shown
+        return False, f"{type(exc).__name__}: {exc}"
 
 
 # crops
